@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Home Dashboard</title>
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --panel-bg: #181818;
+            --card-bg: #1e1e1e;
+            --accent: #00E5FF;
+            --accent-glow: rgba(0, 229, 255, 0.3);
+            --text-main: #ffffff;
+            --text-muted: #aaaaaa;
+            --success: #00E676;
+            --danger: #FF1744;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Layout: Split View */
+        .device-panel {
+            width: 35%;
+            min-width: 350px;
+            background-color: var(--panel-bg);
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .chat-panel {
+            flex: 1;
+            background-color: var(--bg-dark);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Device Panel Content */
+        .panel-header {
+            padding: 25px;
+            border-bottom: 1px solid #333;
+        }
+
+        .panel-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .device-grid {
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 15px;
+            border: 1px solid #333;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            border-color: var(--accent);
+            transform: translateX(5px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .status-badge.on {
+            background-color: rgba(0, 229, 255, 0.2);
+            color: var(--accent);
+        }
+
+        /* Controls */
+        .control-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: var(--accent);
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: var(--accent);
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 40px;
+            height: 20px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 20px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--accent);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(20px);
+        }
+
+        /* Chat Interface - The Stage */
+        .chat-header {
+            padding: 20px 30px;
+            border-bottom: 1px solid #333;
+            background-color: rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: var(--success);
+        }
+
+        .chat-status::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--success);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 18px;
+            font-size: 1rem;
+            line-height: 1.5;
+            position: relative;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background-color: var(--accent);
+            color: #000;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.2);
+        }
+
+        .message.bot {
+            align-self: flex-start;
+            background-color: #2a2a2a;
+            border-bottom-left-radius: 4px;
+            border: 1px solid #333;
+        }
+
+        .message.bot::before {
+            content: "AI";
+            position: absolute;
+            top: -20px;
+            left: 0;
+            font-size: 0.7rem;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .chat-input-area {
+            padding: 30px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid #333;
+        }
+
+        .input-wrapper {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .chat-input {
+            width: 100%;
+            background-color: #222;
+            border: 1px solid #444;
+            border-radius: 30px;
+            padding: 15px 60px 15px 25px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 4px 20px rgba(0, 229, 255, 0.1);
+        }
+
+        .send-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: var(--accent);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: black;
+            transition: transform 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Loading Dots */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 5px 10px;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: #aaa;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Left Panel: Devices -->
+    <div class="device-panel">
+        <div class="panel-header">
+            <h1>🏠 Smart Home</h1>
+            <p style="color: #666; font-size: 0.9rem; margin-top: 5px;">Control Center</p>
+        </div>
+
+        <div class="device-grid">
+            <!-- Living Room Lights -->
+            <div class="card" id="card-lights_living_room">
+                <div class="card-header">
+                    <div class="card-title">💡 Living Room</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="lights_living_room_toggle"
+                            onchange="updateState('lights_living_room', 'status', this.checked ? 'on' : 'off')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="control-row">
+                    <span style="font-size: 0.8rem; color: #888;">Brightness</span>
+                    <span id="lights_living_room_val" style="font-size: 0.8rem;">80%</span>
+                </div>
+                <div style="margin-top: 5px;">
+                    <input type="range" min="0" max="100" value="80" id="lights_living_room_slider"
+                        onchange="updateState('lights_living_room', 'brightness', this.value)">
+                </div>
+            </div>
+
+            <!-- Kitchen Lights -->
+            <div class="card" id="card-lights_kitchen">
+                <div class="card-header">
+                    <div class="card-title">🍳 Kitchen</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="lights_kitchen_toggle"
+                            onchange="updateState('lights_kitchen', 'status', this.checked ? 'on' : 'off')">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="control-row">
+                    <span style="font-size: 0.8rem; color: #888;">Brightness</span>
+                    <span id="lights_kitchen_val" style="font-size: 0.8rem;">100%</span>
+                </div>
+                <div style="margin-top: 5px;">
+                    <input type="range" min="0" max="100" value="100" id="lights_kitchen_slider"
+                        onchange="updateState('lights_kitchen', 'brightness', this.value)">
+                </div>
+            </div>
+
+            <!-- Thermostat -->
+            <div class="card" id="card-thermostat">
+                <div class="card-header">
+                    <div class="card-title">🌡️ Thermostat</div>
+                    <span class="status-badge on" id="thermostat_mode_badge">COOL</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <button onclick="adjustTemp(-1)"
+                        style="background: #333; border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">-</button>
+                    <span style="font-size: 2rem; font-weight: bold;" id="thermostat_temp_display">72°</span>
+                    <button onclick="adjustTemp(1)"
+                        style="background: #333; border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer;">+</button>
+                </div>
+            </div>
+
+            <!-- Front Door Lock -->
+            <div class="card" id="card-lock_front_door">
+                <div class="card-header">
+                    <div class="card-title">🔒 Front Door</div>
+                    <span class="status-badge" id="lock_front_door_badge"
+                        style="background-color: var(--success); color: black;">LOCKED</span>
+                </div>
+                <button onclick="toggleLock('lock_front_door')"
+                    style="width: 100%; padding: 8px; background: #333; border: 1px solid #444; color: white; border-radius: 8px; cursor: pointer; margin-top: 5px;">
+                    Toggle Lock
+                </button>
+            </div>
+
+            <!-- Music -->
+            <div class="card" id="card-music">
+                <div class="card-header">
+                    <div class="card-title">🎵 Music</div>
+                    <span class="status-badge" id="music_status">PAUSED</span>
+                </div>
+                <div class="control-row" style="justify-content: center; gap: 20px; margin: 15px 0;">
+                    <button onclick="updateState('music', 'status', 'playing')"
+                        style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">▶️</button>
+                    <button onclick="updateState('music', 'status', 'paused')"
+                        style="background: none; border: none; font-size: 1.5rem; cursor: pointer;">⏸️</button>
+                </div>
+                <input type="range" min="0" max="100" value="50" id="music_volume"
+                    onchange="updateState('music', 'volume', this.value)">
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Panel: Chatbot (The Stage) -->
+    <div class="chat-panel">
+        <div class="chat-header">
+            <div style="font-weight: 600; font-size: 1.1rem;">Gemini Assistant</div>
+            <div class="chat-status">Online</div>
+        </div>
+
+        <div class="chat-messages" id="chat-messages">
+            <div class="message bot">
+                Hello! I'm your smart home assistant powered by Gemini. I can control your lights, thermostat, locks,
+                and music. What would you like to do?
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <div class="input-wrapper">
+                <input type="text" class="chat-input" id="user-input"
+                    placeholder="Type a command (e.g., 'Turn on the lights')..." onkeypress="handleKeyPress(event)">
+                <button class="send-btn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initial State
+        let state = {
+            lights_living_room: { status: 'off', brightness: 80 },
+            lights_kitchen: { status: 'off', brightness: 100 },
+            lights_bedroom: { status: 'off', brightness: 50 },
+            thermostat: { temperature: 72, mode: 'cool' },
+            lock_front_door: { status: 'locked' },
+            music: { status: 'paused', volume: 50 }
+        };
+
+        function updateUI() {
+            // Lights Living Room
+            document.getElementById('lights_living_room_toggle').checked = state.lights_living_room.status === 'on';
+            document.getElementById('lights_living_room_slider').value = state.lights_living_room.brightness;
+            document.getElementById('lights_living_room_val').innerText = state.lights_living_room.brightness + '%';
+
+            // Lights Kitchen
+            document.getElementById('lights_kitchen_toggle').checked = state.lights_kitchen.status === 'on';
+            document.getElementById('lights_kitchen_slider').value = state.lights_kitchen.brightness;
+            document.getElementById('lights_kitchen_val').innerText = state.lights_kitchen.brightness + '%';
+
+            // Thermostat
+            document.getElementById('thermostat_temp_display').innerText = state.thermostat.temperature + '°';
+            document.getElementById('thermostat_mode_badge').innerText = state.thermostat.mode.toUpperCase();
+
+            // Lock
+            const lockBadge = document.getElementById('lock_front_door_badge');
+            lockBadge.innerText = state.lock_front_door.status === 'locked' ? 'LOCKED' : 'UNLOCKED';
+            lockBadge.style.backgroundColor = state.lock_front_door.status === 'locked' ? 'var(--success)' : 'var(--danger)';
+
+            // Music
+            document.getElementById('music_status').innerText = state.music.status === 'playing' ? 'PLAYING' : 'PAUSED';
+            document.getElementById('music_volume').value = state.music.volume;
+        }
+
+        function updateState(device, key, value) {
+            if (!state[device]) state[device] = {};
+            state[device][key] = value;
+            updateUI();
+        }
+
+        function adjustTemp(delta) {
+            state.thermostat.temperature += delta;
+            updateUI();
+        }
+
+        function toggleLock(device) {
+            state[device].status = state[device].status === 'locked' ? 'unlocked' : 'locked';
+            updateUI();
+        }
+
+        /* Chat Logic */
+        async function sendMessage() {
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Add user message
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            const typingId = addTypingIndicator();
+
+            try {
+                const response = await fetch('/api/solve_automation/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        state: state
+                    })
+                });
+
+                const data = await response.json();
+
+                // Remove typing indicator
+                removeMessage(typingId);
+
+                if (data.reply) {
+                    addMessage(data.reply, 'bot');
+                }
+
+                if (data.updates) {
+                    // Apply updates
+                    for (const [device, updates] of Object.entries(data.updates)) {
+                        if (state[device]) {
+                            Object.assign(state[device], updates);
+                        }
+                    }
+                    updateUI();
+                }
+
+            } catch (error) {
+                removeMessage(typingId);
+                addMessage("Sorry, something went wrong.", 'bot');
+                console.error(error);
+            }
+        }
+
+        function addMessage(text, sender) {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.innerText = text;
+            container.appendChild(div);
+            // Scroll to bottom
+            container.scrollTop = container.scrollHeight;
+            return div.id = 'msg-' + Date.now();
+        }
+
+        function addTypingIndicator() {
+            const container = document.getElementById('chat-messages');
+            const div = document.createElement('div');
+            div.className = 'message bot';
+            div.innerHTML = '<div class="typing-indicator"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+            div.id = 'typing-' + Date.now();
+            return div.id;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+
+        // Init
+        updateUI();
+    </script>
+</body>
+
+</html>

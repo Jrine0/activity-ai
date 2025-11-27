@@ -1,0 +1,131 @@
+{% extends 'sims/base.html' %}
+
+{% block title %}Fault Diagnosis - AI Simulators{% endblock %}
+
+{% block content %}
+<div class="simulator-container">
+    <div class="header">
+        <h2>Fault Diagnosis</h2>
+        <p>Diagnose system faults using Logic Inference (Forward/Backward Chaining).</p>
+    </div>
+
+    <div style="display: flex; gap: 2rem; height: 100%;">
+        <div
+            style="flex: 1; background: #001E2B; padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+            <h3>Knowledge Base (Rules)</h3>
+            <ul style="list-style: none; padding: 0; color: var(--text-gray);">
+                <li>R1: HighTemp AND LowPressure &rarr; CoolantLeak</li>
+                <li>R2: CoolantLeak &rarr; Overheating</li>
+                <li>R3: Overheating &rarr; SystemShutdown</li>
+                <li>R4: Vibration AND Noise &rarr; BearingFault</li>
+                <li>R5: BearingFault &rarr; MotorFailure</li>
+                <li>R6: MotorFailure &rarr; SystemShutdown</li>
+                <li>R7: VoltageSpike &rarr; CircuitDamage</li>
+            </ul>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem;">
+            <div
+                style="background: #001E2B; padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <h3>Observed Symptoms</h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <label><input type="checkbox" class="symptom" value="HighTemp"> High Temperature</label>
+                    <label><input type="checkbox" class="symptom" value="LowPressure"> Low Pressure</label>
+                    <label><input type="checkbox" class="symptom" value="Vibration"> Vibration</label>
+                    <label><input type="checkbox" class="symptom" value="Noise"> Noise</label>
+                    <label><input type="checkbox" class="symptom" value="VoltageSpike"> Voltage Spike</label>
+                </div>
+            </div>
+
+            <div class="controls">
+                <select id="algorithm">
+                    <option value="forward">Forward Chaining (Infer All)</option>
+                    <option value="backward">Backward Chaining (Verify Fault)</option>
+                </select>
+
+                <div id="target-fault-div" style="display: none;">
+                    <select id="target-fault">
+                        <option value="SystemShutdown">System Shutdown</option>
+                        <option value="CoolantLeak">Coolant Leak</option>
+                        <option value="BearingFault">Bearing Fault</option>
+                        <option value="CircuitDamage">Circuit Damage</option>
+                    </select>
+                </div>
+
+                <button class="btn" onclick="diagnose()">Run Diagnosis</button>
+            </div>
+
+            <div
+                style="background: #001E2B; padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); flex-grow: 1;">
+                <h3>Results</h3>
+                <div id="results" style="color: var(--primary-green); white-space: pre-wrap;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const algoSelect = document.getElementById('algorithm');
+    const targetDiv = document.getElementById('target-fault-div');
+
+    algoSelect.addEventListener('change', () => {
+        if (algoSelect.value === 'backward') {
+            targetDiv.style.display = 'block';
+        } else {
+            targetDiv.style.display = 'none';
+        }
+    });
+
+    async function diagnose() {
+        const symptoms = Array.from(document.querySelectorAll('.symptom:checked')).map(cb => cb.value);
+        const algorithm = algoSelect.value;
+        const target = document.getElementById('target-fault').value;
+
+        const data = {
+            symptoms: symptoms,
+            algorithm: algorithm,
+            target: target
+        };
+
+        try {
+            const response = await fetch('/api/solve_diagnosis/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            const resultsDiv = document.getElementById('results');
+
+            if (result.error) {
+                resultsDiv.textContent = 'Error: ' + result.error;
+                resultsDiv.style.color = '#ff4444';
+                return;
+            }
+
+            resultsDiv.style.color = '#00ED64';
+            if (algorithm === 'forward') {
+                resultsDiv.textContent = 'Inferred Facts:\n' + result.inferred.join('\n');
+                if (result.steps && result.steps.length > 0) {
+                    resultsDiv.textContent += '\n\nReasoning Steps:\n' + result.steps.join('\n');
+                }
+            } else {
+                if (result.verified) {
+                    resultsDiv.textContent = `Target '${target}' VERIFIED.\n\nProof Trace:\n` + result.trace.join('\n');
+                } else {
+                    resultsDiv.textContent = `Target '${target}' could NOT be verified from observed symptoms.`;
+                    resultsDiv.style.color = '#ff4444';
+                }
+            }
+
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends 'sims/base.html' %}
+
+{% block content %}
+<div style="text-align: center; margin-bottom: 4rem;">
+    <h1>Explore AI Algorithms</h1>
+    <p style="font-size: 1.2rem; max-width: 800px; margin: 0 auto;">
+        Interactive simulators demonstrating fundamental Artificial Intelligence concepts,
+        from search algorithms to logic inference.
+    </p>
+</div>
+
+<div class="grid-container">
+    <div class="card">
+        <h3>Maze Solver</h3>
+        <p>Visualize BFS, DFS, A*, and Greedy algorithms solving complex mazes in real-time.</p>
+        <a href="{% url 'maze_solver' %}" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+        <h3>Garbage Truck Routing</h3>
+        <p>Optimize waste collection routes using Uniform Cost Search and A* pathfinding.</p>
+        <a href="{% url 'garbage_truck' %}" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+        <h3>Parking Spot Finder</h3>
+        <p>Simulate a car finding the nearest parking spot using intelligent search strategies.</p>
+        <a href="{% url 'parking_finder' %}" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+        <h3>Fault Diagnosis</h3>
+        <p>Diagnose system faults using Forward and Backward Chaining logic inference.</p>
+        <a href="{% url 'fault_diagnosis' %}" class="btn">Launch Simulator</a>
+    </div>
+
+    <div class="card">
+        <h3>Home Automation</h3>
+        <p>Smart home chatbot powered by propositional and first-order logic reasoning.</p>
+        <a href="{% url 'home_automation' %}" class="btn">Launch Simulator</a>
+    </div>
+</div>
+{% endblock %}
